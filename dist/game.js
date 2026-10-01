@@ -45,6 +45,7 @@ function renderStars(){
 }
 
 function render(){
+  window.scrollTo(0,0);
   const a=adventures[current];solved=false;
   $('sceneNumber').textContent=`ПРИКЛЮЧЕНИЕ ${current+1} ИЗ 7`;
   $('situationIcon').textContent=a.icon;
