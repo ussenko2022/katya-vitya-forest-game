@@ -1,1 +1,13 @@
-dist/.env
+.env
+**/.env
+.env.*
+!.env.example
+!**/.env.example
+__pycache__/
+*.pyc
+.venv/
+build/
+*.spec
+launcher-dist/
+ForestGameLauncher.exe
+.ghconfig/
