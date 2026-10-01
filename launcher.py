@@ -76,7 +76,7 @@ class Launcher(tk.Tk):
         settings_frame.pack(fill="x", pady=16)
         settings_frame.columnconfigure(1, weight=1)
 
-        self.key_var = tk.StringVar(value=os.environ.get("OPENAI_API_KEY") or env.get("OPENAI_API_KEY") or env.get("openai_token") or "")
+        self.key_var = tk.StringVar(value=env.get("OPENAI_API_KEY") or env.get("openai_token") or os.environ.get("OPENAI_API_KEY") or "")
         self.model_var = tk.StringVar(value=current_model)
         self.female_var = tk.StringVar(value=current_voices["female"])
         self.male_var = tk.StringVar(value=current_voices["male"])
@@ -116,6 +116,7 @@ class Launcher(tk.Tk):
         temporary = ROOT / ".env.tmp"
         temporary.write_text("\n".join(f"{name}={value}" for name, value in values.items()) + "\n", encoding="utf-8")
         temporary.replace(target)
+        os.environ.update(values)
         self.status.set("Настройки сохранены в локальный .env.")
         return True
 
