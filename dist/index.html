@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d3b31">
+  <meta name="description" content="Интерактивная игра о безопасности в лесу для дошкольников">
+  <title>Опасные приключения Кати и Вити в лесу</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <main class="game" id="game">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">🌲</span><div><small>Игра для дошкольников</small><h1>Катя и Витя в лесу</h1></div></div>
+      <div class="top-actions">
+        <div class="stars" id="stars" aria-label="Собрано звёзд: 0 из 7"></div>
+        <button class="round-button" id="soundButton" type="button" aria-label="Выключить звук" title="Включить или выключить звук">🔊</button>
+      </div>
+    </header>
+
+    <section class="play-area" aria-label="Игровая сцена">
+      <div class="scene" id="scene">
+        <div class="scene-shade"></div>
+        <div class="scene-number" id="sceneNumber">ПРИКЛЮЧЕНИЕ 1 ИЗ 7</div>
+        <div class="situation-icon" id="situationIcon" aria-hidden="true">🫐</div>
+        <img class="heroes" src="assets/katya-vitya.png" alt="Катя и Витя улыбаются в лесу">
+        <div class="speech-bubble" id="speechBubble" aria-live="polite">Помоги нам выбрать правильно!</div>
+      </div>
+
+      <div class="question-panel" id="questionPanel">
+        <div class="question-line">
+          <div class="question-copy"><span class="eyebrow">КАК ПОСТУПИТЬ?</span><h2 id="questionText">Катя увидела красивые красные ягоды. Что делать?</h2></div>
+          <button class="listen-button" id="listenButton" type="button" aria-label="Прослушать вопрос и варианты"><span aria-hidden="true">🔊</span><span>Слушать</span></button>
+        </div>
+        <div class="answers" id="answers" role="group" aria-label="Варианты ответа"></div>
+        <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+        <button class="next-button" id="nextButton" type="button" hidden>Дальше <span aria-hidden="true">➜</span></button>
+      </div>
+    </section>
+
+    <footer class="footer"><span>Нажми на картинку с правильным ответом</span><span class="footer-leaf" aria-hidden="true">✦</span><span>Если сомневаешься — позови взрослого</span></footer>
+  </main>
+
+  <div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome-card">
+      <span class="welcome-kicker">ИНТЕРАКТИВНАЯ ИГРА</span>
+      <h2 id="welcomeTitle">Опасные приключения<br>Кати и Вити в лесу</h2>
+      <p>Помоги друзьям принять 7 правильных решений и собери все звёзды!</p>
+      <div class="welcome-heroes"><img src="assets/katya-vitya.png" alt="Катя и Витя"></div>
+      <button class="start-button" id="startButton" type="button"><span aria-hidden="true">▶</span> Начать игру</button>
+      <small>Включите звук, чтобы слушать задания и ответы</small>
+    </div>
+  </div>
+
+  <div class="ending" id="ending" role="dialog" aria-modal="true" aria-labelledby="endingTitle" hidden>
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <div class="ending-card">
+      <div class="ending-stars" aria-hidden="true">🌟 🌟 🌟</div>
+      <h2 id="endingTitle">Ура! Вы прошли лес!</h2>
+      <p>Катя и Витя благодарят вас. Вы знаете, как беречь себя и природу!</p>
+      <img src="assets/katya-vitya.png" alt="Счастливые Катя и Витя">
+      <button class="start-button" id="restartButton" type="button">↻ Играть снова</button>
+    </div>
+  </div>
+</body>
+</html>
