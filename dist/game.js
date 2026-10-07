@@ -6,7 +6,7 @@ let soundOn = true;
 let audioContext, currentAudio, speechTimer, reactionTimer, reactionSpeechTimer, flipTimer;
 let speechGeneration = 0, feedbackGeneration = 0;
 const synthesis = window.speechSynthesis;
-const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,foundForest:new Set(),excludedForest:new Set(),sortedTrash:new Set(),selectedTrash:null,session:0};
+const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,stageIndex:0,stageOrder:[],foundForest:new Set(),excludedForest:new Set(),sortedTrash:new Set(),selectedTrash:null,session:0};
 const completed = loadCompleted();
 
 const data = () => GAME[locale];
@@ -87,13 +87,17 @@ function playNotes(success){
 
 function react(success,message,spoken=[message]){
   const flash=$('colorFlash');
+  const immersive=state.level>=6&&!$('immersiveStage').hidden;
+  const feedback=immersive?$('stageFeedback'):$('explanation');
   stopVoice();feedbackGeneration++;
   clearTimeout(reactionTimer);clearTimeout(reactionSpeechTimer);
   flash.className='color-flash';void flash.offsetWidth;
   flash.classList.add(success?'flash-success':'flash-error');
-  $('explanation').textContent=`${success?'✓':'!'} ${message}`;$('explanation').className=`explanation ${success?'good':'bad'}`;
-  $('speechBubble').textContent=success?ui('speechThanks'):ui('speechTry');
-  if(success&&!$('sceneHeroes').classList.contains('happy'))$('sceneHeroes').classList.add('happy');
+  feedback.textContent=`${success?'✓':'!'} ${message}`;feedback.className=`${immersive?'stage-feedback':'explanation'} ${success?'good':'bad'}`;
+  (immersive?$('stageBubble'):$('speechBubble')).textContent=success?ui('speechThanks'):ui('speechTry');
+  for(const hero of (immersive?[$('stageKatya'),$('stageVitya')]:[$('sceneHeroes')])){
+    if(success&&!hero.classList.contains('happy'))hero.classList.add('happy');
+  }
   playNotes(success);
   const session=state.session,generation=feedbackGeneration;
   reactionSpeechTimer=setTimeout(()=>{if(session===state.session&&generation===feedbackGeneration)speak(spoken);},success?260:330);
@@ -103,14 +107,18 @@ function react(success,message,spoken=[message]){
 function clearFeedback(){
   feedbackGeneration++;stopVoice();
   clearTimeout(reactionTimer);clearTimeout(reactionSpeechTimer);clearTimeout(flipTimer);
-  $('colorFlash').className='color-flash';$('sceneHeroes').classList.remove('happy');
+  $('colorFlash').className='color-flash';
+  for(const hero of [$('sceneHeroes'),$('stageKatya'),$('stageVitya')])hero.classList.remove('happy');
   $('explanation').textContent='';$('explanation').className='explanation';
-  $('nextButton').hidden=true;$('speechBubble').textContent=ui('speechBubble');
+  $('stageFeedback').textContent='';$('stageFeedback').className='stage-feedback';
+  $('nextButton').hidden=true;$('stageNextButton').hidden=true;
+  $('speechBubble').textContent=ui('speechBubble');$('stageBubble').textContent=ui('speechBubble');
 }
-function setNext(label,callback){const button=$('nextButton');button.textContent=label;button.onclick=callback;button.hidden=false;}
+function setNext(label,callback){const button=state.level>=6?$('stageNextButton'):$('nextButton');button.textContent=label;button.onclick=callback;button.hidden=false;}
 function progress(done,total){
-  $('sceneProgress').innerHTML=Array.from({length:total},(_,i)=>`<span class="progress-star ${i<done?'filled':''}" aria-hidden="true">★</span>`).join('');
-  $('sceneProgress').setAttribute('aria-label',format(ui('progress'),{done,total}));
+  const element=state.level>=6?$('stageProgress'):$('sceneProgress');
+  element.innerHTML=Array.from({length:total},(_,i)=>`<span class="progress-star ${i<done?'filled':''}" aria-hidden="true">★</span>`).join('');
+  element.setAttribute('aria-label',format(ui('progress'),{done,total}));
 }
 function setHeading(kicker,title,instruction,icon){$('activityKicker').textContent=kicker;$('levelTitle').textContent=title;$('instruction').textContent=instruction;$('sceneIllustration').textContent=icon;}
 
@@ -131,12 +139,13 @@ function applyLocale(){
   document.querySelector('.menu-copy p').textContent=ui('menuIntro');
   $('menuHint').textContent=ui('menuHint');$('aiDisclosure').textContent=ui('aiDisclosure');
   $('listenButton').querySelector('span').textContent=ui('listen');
+  $('stageListenButton').querySelector('span').textContent=ui('listen');
   $('soundButton').setAttribute('aria-label',soundOn?(locale==='ru'?'Выключить звук':'Дыбысты өшіру'):(locale==='ru'?'Включить звук':'Дыбысты қосу'));
   $('endingMenuButton').textContent=ui('chooseGame');$('replayButton').textContent=ui('again');
   document.querySelector('.level-footer').textContent=ui('footer');
   renderMenu();updateVoiceWarning();
   if(state.level && !$('levelScreen').hidden){
-    $('levelBadge').textContent=`${ui('level')} ${state.level} · ${data().levels[state.level-1].title.toUpperCase()}`;
+    if(state.level<6)$('levelBadge').textContent=`${ui('level')} ${state.level} · ${data().levels[state.level-1].title.toUpperCase()}`;
     if(state.level===1)renderSafety(false);
     if(state.level===2)renderHabitat(false);
     if(state.level===3)renderGrowth(false);
@@ -166,9 +175,12 @@ function showMenu(){
 function startLevel(level){
   state.session++;state.level=level;state.step=0;state.solved=false;state.selectedAnimal=null;
   state.matched=new Set();state.growthIndex=0;state.flipped=[];state.memoryLocked=false;state.memoryCards=[];
-  state.foundForest=new Set();state.excludedForest=new Set();state.sortedTrash=new Set();state.selectedTrash=null;
+  state.stageIndex=0;state.stageOrder=[];state.foundForest=new Set();state.excludedForest=new Set();state.sortedTrash=new Set();state.selectedTrash=null;
   $('menuScreen').hidden=true;$('ending').hidden=true;$('levelScreen').hidden=false;$('menuButton').hidden=false;
-  $('levelBadge').textContent=`${ui('level')} ${level} · ${data().levels[level-1].title.toUpperCase()}`;
+  const immersive=level>=6;
+  $('levelScreen').classList.toggle('immersive-mode',immersive);
+  $('levelScene').hidden=immersive;document.querySelector('.activity-panel').hidden=immersive;$('immersiveStage').hidden=!immersive;
+  if(!immersive)$('levelBadge').textContent=`${ui('level')} ${level} · ${data().levels[level-1].title.toUpperCase()}`;
   $('levelScene').className=`level-scene theme-${level}`;
   clearFeedback();window.scrollTo(0,0);
   if(level===1)renderSafety();
@@ -197,8 +209,8 @@ function sceneSpeech(){
   if(state.level===3)speak(data().speech.growthIntro);
   if(state.level===4)speak(data().counting[state.step].prompt);
   if(state.level===5)speak(data().speech.memoryIntro);
-  if(state.level===6)speak(data().speech.forestIntro);
-  if(state.level===7)speak(data().speech.recyclingIntro);
+  if(state.level===6)speak(data().forestStages[state.stageIndex].intro);
+  if(state.level===7)speak(data().recyclingStages[state.stageIndex].intro);
 }
 
 function renderSafety(reset=true){
@@ -334,53 +346,94 @@ function flipMemory(index,button){
   }
 }
 
+function prepareStage(stage, kicker, done, total){
+  if(!/^(forest|riverbank|shallows|twilight-forest)\.png$/.test(stage.background))throw new Error('Unexpected stage background');
+  $('stageWorld').style.backgroundImage=`url('assets/${stage.background}')`;
+  $('stageKicker').textContent=kicker;
+  $('stageTitle').textContent=stage.title;
+  $('stagePrompt').textContent=stage.intro;
+  $('stageCounter').textContent=format(ui('stageOf'),{n:state.stageIndex+1,total:3});
+  progress(done,total);
+}
+
+function completeStage(done,total){
+  if(done!==total)return;
+  setNext(state.stageIndex===2?ui('finish'):ui('nextStage'),state.stageIndex===2?finishLevel:advanceStage);
+}
+
+function advanceStage(){
+  state.stageIndex++;
+  state.stageOrder=[];
+  state.foundForest=new Set();state.excludedForest=new Set();
+  state.sortedTrash=new Set();state.selectedTrash=null;
+  if(state.level===6)renderForestAnimals();else renderRecycling();
+}
+
 function renderForestAnimals(announce=true){
   clearFeedback();
-  const animals=data().forestAnimals,total=animals.filter(animal=>animal.forest).length;
-  setHeading(ui('forestKicker'),data().levels[5].title,ui('forestInstruction'),'🌲🐾');
-  progress(state.foundForest.size,total);
-  $('activityContent').innerHTML=`<div class="forest-animal-grid">${animals.map((animal,index)=>`<button class="forest-animal-card ${state.foundForest.has(index)?'correct':''} ${state.excludedForest.has(index)?'excluded':''}" type="button" data-forest-animal="${index}" ${state.foundForest.has(index)||state.excludedForest.has(index)?'disabled':''} aria-label="${animal.name}"><span aria-hidden="true">${animal.icon}</span><strong>${animal.name}</strong></button>`).join('')}</div>`;
-  $('activityContent').querySelectorAll('[data-forest-animal]').forEach(button=>button.addEventListener('click',()=>{
-    const index=Number(button.dataset.forestAnimal),animal=animals[index];
+  const stage=data().forestStages[state.stageIndex],catalog=data().forestAnimals;
+  if(state.stageOrder.length!==stage.animalIds.length)state.stageOrder=shuffle(stage.animalIds);
+  const total=stage.animalIds.filter(id=>catalog[id].forest).length;
+  prepareStage(stage,ui('forestKicker'),state.foundForest.size,total);
+  $('stagePlayfield').innerHTML=`<div class="animal-field">${state.stageOrder.map(id=>{
+    const animal=catalog[id],found=state.foundForest.has(id),excluded=state.excludedForest.has(id);
+    return `<button class="world-animal ${found?'found':''} ${excluded?'ruled-out':''}" type="button" data-forest-animal="${id}" ${found||excluded?'disabled':''} aria-label="${animal.name}"><span class="world-icon" aria-hidden="true">${animal.icon}</span><span class="world-label">${animal.name}</span></button>`;
+  }).join('')}</div>`;
+  $('stagePlayfield').querySelectorAll('[data-forest-animal]').forEach(button=>button.addEventListener('click',()=>{
+    const id=Number(button.dataset.forestAnimal),animal=catalog[id];
     if(animal.forest){
-      state.foundForest.add(index);button.classList.add('correct');button.disabled=true;
+      state.foundForest.add(id);button.classList.add('found');button.disabled=true;
       progress(state.foundForest.size,total);react(true,animal.praise,[animal.name,animal.praise]);
-      if(state.foundForest.size===total)setNext(ui('finish'),finishLevel);
+      completeStage(state.foundForest.size,total);
     }else{
-      state.excludedForest.add(index);button.classList.add('excluded');button.disabled=true;
+      state.excludedForest.add(id);button.classList.add('ruled-out');button.disabled=true;
       react(false,animal.why,[animal.name,animal.why]);
     }
   }));
-  if(state.foundForest.size===total)setNext(ui('finish'),finishLevel);
+  completeStage(state.foundForest.size,total);
   if(announce)sceneSpeech();
 }
 
 function renderRecycling(announce=true){
   clearFeedback();state.selectedTrash=null;
-  const items=data().recyclingItems,bins=data().recyclingBins;
-  setHeading(ui('recyclingKicker'),data().levels[6].title,ui('recyclingInstruction'),'♻️');
-  progress(state.sortedTrash.size,items.length);
-  $('activityContent').innerHTML=`<div class="recycling-board"><div><span class="column-label">${ui('recyclingItemsLabel')}</span><div class="recycling-items">${items.map((item,index)=>`<button class="recycling-item ${state.sortedTrash.has(index)?'sorted':''}" type="button" data-trash="${index}" ${state.sortedTrash.has(index)?'disabled':''} aria-label="${item.name}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong></button>`).join('')}</div></div><div><span class="column-label">${ui('recyclingBinsLabel')}</span><div class="recycling-bins">${bins.map(bin=>`<button class="recycling-bin bin-${bin.color}" type="button" data-bin="${bin.id}" aria-label="${bin.name}"><span class="bin-icon" aria-hidden="true">${bin.icon}</span><strong>${bin.name}</strong><span class="bin-contents" aria-hidden="true">${items.filter((item,index)=>item.bin===bin.id&&state.sortedTrash.has(index)).map(item=>item.icon).join(' ')}</span></button>`).join('')}</div></div></div>`;
-  $('activityContent').querySelectorAll('[data-trash]').forEach(button=>button.addEventListener('click',()=>{
-    state.selectedTrash=Number(button.dataset.trash);
-    $('activityContent').querySelectorAll('[data-trash]').forEach(item=>item.classList.toggle('selected',item===button));
-    $('explanation').textContent='';$('explanation').className='explanation';
-    speak([items[state.selectedTrash].name,data().speech.chooseBin]);
+  const stage=data().recyclingStages[state.stageIndex],catalog=data().recyclingItems;
+  const bins=stage.binIds.map(id=>data().recyclingBins.find(bin=>bin.id===id));
+  if(state.stageOrder.length!==stage.itemIds.length)state.stageOrder=shuffle(stage.itemIds);
+  prepareStage(stage,ui('recyclingKicker'),state.sortedTrash.size,stage.itemIds.length);
+  $('stagePlayfield').innerHTML=`<div class="world-bins">${bins.map(bin=>`<button class="world-bin bin-${bin.color}" type="button" data-bin="${bin.id}" aria-label="${bin.name}"><span class="world-bin-icon" aria-hidden="true">${bin.icon}</span><strong>${bin.name}</strong><span class="bin-contents" aria-hidden="true">${stage.itemIds.filter(id=>catalog[id].bin===bin.id&&state.sortedTrash.has(id)).map(id=>catalog[id].icon).join(' ')}</span></button>`).join('')}</div><div class="litter-field">${state.stageOrder.map(id=>{
+    const item=catalog[id],done=state.sortedTrash.has(id);
+    const icon=id===6?'<img src="assets/watermelon-rind.svg" alt="">':id===7?'<img src="assets/melon-rind.svg" alt="">':item.icon;
+    return `<button class="world-litter ${item.bin==='nature'?'nature-item':''} ${done?(item.bin==='nature'?'protected':'sorted'):''}" type="button" data-trash="${id}" ${done?'disabled':''} aria-label="${item.name}"><span class="world-icon" aria-hidden="true">${icon}</span><span class="world-label">${item.name}</span></button>`;
+  }).join('')}</div>`;
+  $('stagePlayfield').querySelectorAll('[data-trash]').forEach(button=>button.addEventListener('click',()=>{
+    const id=Number(button.dataset.trash),item=catalog[id];
+    if(item.bin==='nature'){
+      state.selectedTrash=null;
+      $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.remove('selected'));
+      state.sortedTrash.add(id);button.classList.add('protected');button.disabled=true;
+      progress(state.sortedTrash.size,stage.itemIds.length);react(true,item.praise,[item.name,item.praise]);
+      completeStage(state.sortedTrash.size,stage.itemIds.length);
+      return;
+    }
+    state.selectedTrash=id;
+    $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.toggle('selected',other===button));
+    $('stageFeedback').textContent='';$('stageFeedback').className='stage-feedback';
+    speak([item.name,data().speech.chooseBin]);
   }));
-  $('activityContent').querySelectorAll('[data-bin]').forEach(button=>button.addEventListener('click',()=>{
+  $('stagePlayfield').querySelectorAll('[data-bin]').forEach(button=>button.addEventListener('click',()=>{
     const bin=bins.find(entry=>entry.id===button.dataset.bin);
     if(state.selectedTrash===null){react(false,data().speech.chooseItemFirst,[bin.name,data().speech.chooseItemFirst]);return;}
-    const index=state.selectedTrash,item=items[index];
-    if(item.bin===button.dataset.bin){
-      state.sortedTrash.add(index);state.selectedTrash=null;
-      const itemButton=$('activityContent').querySelector(`[data-trash="${index}"]`);
+    const id=state.selectedTrash,item=catalog[id];
+    if(item.bin===bin.id){
+      state.sortedTrash.add(id);state.selectedTrash=null;
+      const itemButton=$('stagePlayfield').querySelector(`[data-trash="${id}"]`);
       itemButton.classList.remove('selected');itemButton.classList.add('sorted');itemButton.disabled=true;
-      button.querySelector('.bin-contents').textContent=[...state.sortedTrash].filter(i=>items[i].bin===button.dataset.bin).map(i=>items[i].icon).join(' ');
-      progress(state.sortedTrash.size,items.length);react(true,item.praise,[bin.name,item.praise]);
-      if(state.sortedTrash.size===items.length)setNext(ui('finish'),finishLevel);
+      button.querySelector('.bin-contents').textContent=stage.itemIds.filter(i=>catalog[i].bin===bin.id&&state.sortedTrash.has(i)).map(i=>catalog[i].icon).join(' ');
+      progress(state.sortedTrash.size,stage.itemIds.length);react(true,item.praise,[bin.name,item.praise]);
+      completeStage(state.sortedTrash.size,stage.itemIds.length);
     }else react(false,item.why,[bin.name,item.why]);
   }));
-  if(state.sortedTrash.size===items.length)setNext(ui('finish'),finishLevel);
+  completeStage(state.sortedTrash.size,stage.itemIds.length);
   if(announce)sceneSpeech();
 }
 
@@ -388,6 +441,7 @@ $('menuButton').addEventListener('click',showMenu);
 $('endingMenuButton').addEventListener('click',showMenu);
 $('replayButton').addEventListener('click',()=>startLevel(state.level));
 $('listenButton').addEventListener('click',sceneSpeech);
+$('stageListenButton').addEventListener('click',sceneSpeech);
 $('languageSelect').addEventListener('change',event=>{stopVoice();locale=event.target.value;state.session++;applyLocale();});
 $('voiceSelect').addEventListener('change',event=>{stopVoice();voiceMode=event.target.value;updateVoiceWarning();if(state.level&&!$('levelScreen').hidden)sceneSpeech();});
 $('soundButton').addEventListener('click',()=>{
@@ -395,6 +449,7 @@ $('soundButton').addEventListener('click',()=>{
   $('soundButton').setAttribute('aria-label',soundOn?(locale==='ru'?'Выключить звук':'Дыбысты өшіру'):(locale==='ru'?'Включить звук':'Дыбысты қосу'));
   if(!soundOn)stopVoice();else if(state.level&&!$('levelScreen').hidden)sceneSpeech();
 });
-$('sceneHeroes').addEventListener('animationend',event=>{if(event.animationName==='cheer')event.currentTarget.classList.remove('happy');});
+$('sceneHeroes').addEventListener('animationend',event=>{if(['cheer','gentle-cheer'].includes(event.animationName))event.currentTarget.classList.remove('happy');});
+for(const id of ['stageKatya','stageVitya'])$(id).addEventListener('animationend',event=>{if(['stage-cheer','gentle-cheer'].includes(event.animationName))event.currentTarget.classList.remove('happy');});
 if(synthesis)synthesis.onvoiceschanged=updateVoiceWarning;
 applyLocale();

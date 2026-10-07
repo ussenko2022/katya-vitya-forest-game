@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" role="img" aria-label="Дынная корка">
+  <path d="M9 18 Q17 86 60 91 Q103 86 111 18 Q95 65 60 68 Q25 65 9 18Z" fill="#d49a36" stroke="#986725" stroke-width="4"/>
+  <path d="M14 18 Q29 69 60 72 Q91 69 106 18 Q88 58 60 61 Q32 58 14 18Z" fill="#f7df7b"/>
+  <path d="M20 19 Q34 59 60 63 Q86 59 100 19 Q81 51 60 53 Q39 51 20 19Z" fill="#fff3bd"/>
+  <path d="M42 48l-2-5m20 9v-6m18 1 2-5" stroke="#b18c50" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -25,13 +25,30 @@ def verify() -> None:
         assert all(answer.get("why") for answer in target["answers"] if not answer.get("correct"))
     for section in ("habitats", "growth", "counting", "memoryPairs"):
         assert len(ru[section]) == len(kk[section]), f"Different {section} length"
-    assert len(ru["forestAnimals"]) == len(kk["forestAnimals"]) == 9
+    assert len(ru["forestAnimals"]) == len(kk["forestAnimals"]) == 16
     assert [animal["forest"] for animal in ru["forestAnimals"]] == [animal["forest"] for animal in kk["forestAnimals"]]
-    assert sum(animal["forest"] for animal in ru["forestAnimals"]) == 5
-    assert len(ru["recyclingItems"]) == len(kk["recyclingItems"]) == 6
-    assert [bin_item["id"] for bin_item in ru["recyclingBins"]] == [bin_item["id"] for bin_item in kk["recyclingBins"]] == ["paper", "plastic"]
+    assert len(ru["forestStages"]) == len(kk["forestStages"]) == 3
+    for source, target in zip(ru["forestStages"], kk["forestStages"]):
+        assert source["animalIds"] == target["animalIds"]
+        assert source["background"] == target["background"]
+        assert len(source["animalIds"]) == 9
+        assert all(0 <= item < len(ru["forestAnimals"]) for item in source["animalIds"])
+        assert sum(ru["forestAnimals"][item]["forest"] for item in source["animalIds"]) == 5
+    assert len(ru["recyclingItems"]) == len(kk["recyclingItems"]) == 12
+    assert [bin_item["id"] for bin_item in ru["recyclingBins"]] == [bin_item["id"] for bin_item in kk["recyclingBins"]] == ["paper", "plastic", "organic", "metal"]
     assert [item["bin"] for item in ru["recyclingItems"]] == [item["bin"] for item in kk["recyclingItems"]]
-    assert all(item["bin"] in {"paper", "plastic"} for item in ru["recyclingItems"])
+    assert all(item["bin"] in {"paper", "plastic", "organic", "metal", "nature"} for item in ru["recyclingItems"])
+    assert len(ru["recyclingStages"]) == len(kk["recyclingStages"]) == 3
+    assert [stage["background"] for stage in ru["recyclingStages"]] == ["forest.png", "riverbank.png", "shallows.png"]
+    for source, target in zip(ru["recyclingStages"], kk["recyclingStages"]):
+        assert source["itemIds"] == target["itemIds"]
+        assert source["binIds"] == target["binIds"]
+        assert len(source["itemIds"]) == 6
+        assert all(0 <= item < len(ru["recyclingItems"]) for item in source["itemIds"])
+        assert all(ru["recyclingItems"][item]["bin"] in source["binIds"] + ["nature"] for item in source["itemIds"])
+    assert sum(ru["recyclingItems"][item]["bin"] == "nature" for item in ru["recyclingStages"][2]["itemIds"]) == 2
+    for stage in ru["forestStages"] + ru["recyclingStages"]:
+        assert (ROOT / "dist" / "assets" / stage["background"]).is_file()
     assert set(ru["ui"]) == set(kk["ui"])
     assert set(ru["speech"]) == set(kk["speech"])
 
@@ -57,6 +74,8 @@ def verify() -> None:
     assert not any(path.name.startswith(".env") for path in public.rglob("*"))
     for name in ("index.html", "style.css", "game.js", "content.js", "voice-map.js"):
         assert (ROOT / "dist" / name).read_bytes() == (public / name).read_bytes(), f"Public {name} is stale"
+    for name in ("forest.png", "riverbank.png", "shallows.png", "twilight-forest.png", "heroes-stage.png", "watermelon-rind.svg", "melon-rind.svg"):
+        assert (ROOT / "dist" / "assets" / name).read_bytes() == (public / "assets" / name).read_bytes(), f"Public asset {name} is stale"
     print(f"Verified 7 levels, 2 locales, {count} voice clips and public docs/ without .env.")
 
 

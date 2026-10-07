@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" role="img" aria-label="Арбузная корка">
+  <path d="M9 18 Q17 86 60 91 Q103 86 111 18 Q95 65 60 68 Q25 65 9 18Z" fill="#237b43" stroke="#154b31" stroke-width="4"/>
+  <path d="M14 18 Q29 69 60 72 Q91 69 106 18 Q88 58 60 61 Q32 58 14 18Z" fill="#8ed56d"/>
+  <path d="M20 19 Q34 59 60 63 Q86 59 100 19 Q81 51 60 53 Q39 51 20 19Z" fill="#f2605a"/>
+  <path d="M39 47l-3-8m24 14v-9m22 0 3-8" stroke="#523328" stroke-width="3" stroke-linecap="round"/>
+</svg>

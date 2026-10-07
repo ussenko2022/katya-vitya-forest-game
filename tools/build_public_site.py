@@ -12,7 +12,7 @@ from generate_audio import read_env
 SOURCE = ROOT / "dist"
 TARGET = ROOT / "docs"
 STATIC_FILES = ("index.html", "style.css", "game.js", "content.js", "voice-map.js")
-IMAGES = ("forest.png", "katya-vitya.png")
+IMAGES = ("forest.png", "katya-vitya.png", "heroes-stage.png", "riverbank.png", "shallows.png", "twilight-forest.png", "watermelon-rind.svg", "melon-rind.svg")
 
 
 def build() -> tuple[int, int]:
