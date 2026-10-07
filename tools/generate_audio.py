@@ -88,6 +88,12 @@ def collect_lines(content: dict) -> dict[str, list[str]]:
             lines.update((count["prompt"], count["praise"], count["wrong"]))
         lines.update(body["numberWords"])
         lines.update(pair["name"] for pair in body["memoryPairs"])
+        for animal in body["forestAnimals"]:
+            lines.add(animal["name"])
+            lines.add(animal.get("praise") or animal["why"])
+        lines.update(bin_item["name"] for bin_item in body["recyclingBins"])
+        for item in body["recyclingItems"]:
+            lines.update((item["name"], item["praise"], item["why"]))
         result[locale] = sorted(line for line in lines if line.strip())
     return result
 

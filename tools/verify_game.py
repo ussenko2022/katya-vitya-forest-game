@@ -13,7 +13,9 @@ def verify() -> None:
     content = load_content()
     ru, kk = content["ru"], content["kk"]
     assert set(ru) == set(kk), "Locale sections differ"
-    assert len(ru["levels"]) == len(kk["levels"]) == 5
+    assert len(ru["levels"]) == len(kk["levels"]) == 7
+    assert [level["id"] for level in ru["levels"]] == list(range(1, 8))
+    assert [level["id"] for level in kk["levels"]] == list(range(1, 8))
     assert len(ru["adventures"]) == len(kk["adventures"]) == 7
     for source, target in zip(ru["adventures"], kk["adventures"]):
         assert len(source["answers"]) == len(target["answers"]) == 3
@@ -23,6 +25,13 @@ def verify() -> None:
         assert all(answer.get("why") for answer in target["answers"] if not answer.get("correct"))
     for section in ("habitats", "growth", "counting", "memoryPairs"):
         assert len(ru[section]) == len(kk[section]), f"Different {section} length"
+    assert len(ru["forestAnimals"]) == len(kk["forestAnimals"]) == 9
+    assert [animal["forest"] for animal in ru["forestAnimals"]] == [animal["forest"] for animal in kk["forestAnimals"]]
+    assert sum(animal["forest"] for animal in ru["forestAnimals"]) == 5
+    assert len(ru["recyclingItems"]) == len(kk["recyclingItems"]) == 6
+    assert [bin_item["id"] for bin_item in ru["recyclingBins"]] == [bin_item["id"] for bin_item in kk["recyclingBins"]] == ["paper", "plastic"]
+    assert [item["bin"] for item in ru["recyclingItems"]] == [item["bin"] for item in kk["recyclingItems"]]
+    assert all(item["bin"] in {"paper", "plastic"} for item in ru["recyclingItems"])
     assert set(ru["ui"]) == set(kk["ui"])
     assert set(ru["speech"]) == set(kk["speech"])
 
@@ -48,7 +57,7 @@ def verify() -> None:
     assert not any(path.name.startswith(".env") for path in public.rglob("*"))
     for name in ("index.html", "style.css", "game.js", "content.js", "voice-map.js"):
         assert (ROOT / "dist" / name).read_bytes() == (public / name).read_bytes(), f"Public {name} is stale"
-    print(f"Verified 5 levels, 2 locales, {count} voice clips and public docs/ without .env.")
+    print(f"Verified 7 levels, 2 locales, {count} voice clips and public docs/ without .env.")
 
 
 if __name__ == "__main__":

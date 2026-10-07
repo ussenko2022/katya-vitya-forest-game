@@ -6,7 +6,7 @@ let soundOn = true;
 let audioContext, currentAudio, speechTimer, reactionTimer, reactionSpeechTimer, flipTimer;
 let speechGeneration = 0, feedbackGeneration = 0;
 const synthesis = window.speechSynthesis;
-const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,session:0};
+const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,foundForest:new Set(),excludedForest:new Set(),sortedTrash:new Set(),selectedTrash:null,session:0};
 const completed = loadCompleted();
 
 const data = () => GAME[locale];
@@ -142,7 +142,9 @@ function applyLocale(){
     if(state.level===3)renderGrowth(false);
     if(state.level===4)renderCounting(false);
     if(state.level===5)renderMemory(false);
-    if(state.level===2||state.level===3||state.level===5)sceneSpeech();
+    if(state.level===6)renderForestAnimals(false);
+    if(state.level===7)renderRecycling(false);
+    if([2,3,5,6,7].includes(state.level))sceneSpeech();
   }
   if(!$('ending').hidden){
     $('endingTitle').textContent=format(ui('finished'),{n:state.level});
@@ -164,6 +166,7 @@ function showMenu(){
 function startLevel(level){
   state.session++;state.level=level;state.step=0;state.solved=false;state.selectedAnimal=null;
   state.matched=new Set();state.growthIndex=0;state.flipped=[];state.memoryLocked=false;state.memoryCards=[];
+  state.foundForest=new Set();state.excludedForest=new Set();state.sortedTrash=new Set();state.selectedTrash=null;
   $('menuScreen').hidden=true;$('ending').hidden=true;$('levelScreen').hidden=false;$('menuButton').hidden=false;
   $('levelBadge').textContent=`${ui('level')} ${level} · ${data().levels[level-1].title.toUpperCase()}`;
   $('levelScene').className=`level-scene theme-${level}`;
@@ -173,6 +176,8 @@ function startLevel(level){
   if(level===3)renderGrowth();
   if(level===4)renderCounting();
   if(level===5)renderMemory();
+  if(level===6)renderForestAnimals();
+  if(level===7)renderRecycling();
 }
 
 function finishLevel(){
@@ -192,6 +197,8 @@ function sceneSpeech(){
   if(state.level===3)speak(data().speech.growthIntro);
   if(state.level===4)speak(data().counting[state.step].prompt);
   if(state.level===5)speak(data().speech.memoryIntro);
+  if(state.level===6)speak(data().speech.forestIntro);
+  if(state.level===7)speak(data().speech.recyclingIntro);
 }
 
 function renderSafety(reset=true){
@@ -325,6 +332,56 @@ function flipMemory(index,button){
       state.flipped=[];state.memoryLocked=false;
     },1500);
   }
+}
+
+function renderForestAnimals(announce=true){
+  clearFeedback();
+  const animals=data().forestAnimals,total=animals.filter(animal=>animal.forest).length;
+  setHeading(ui('forestKicker'),data().levels[5].title,ui('forestInstruction'),'🌲🐾');
+  progress(state.foundForest.size,total);
+  $('activityContent').innerHTML=`<div class="forest-animal-grid">${animals.map((animal,index)=>`<button class="forest-animal-card ${state.foundForest.has(index)?'correct':''} ${state.excludedForest.has(index)?'excluded':''}" type="button" data-forest-animal="${index}" ${state.foundForest.has(index)||state.excludedForest.has(index)?'disabled':''} aria-label="${animal.name}"><span aria-hidden="true">${animal.icon}</span><strong>${animal.name}</strong></button>`).join('')}</div>`;
+  $('activityContent').querySelectorAll('[data-forest-animal]').forEach(button=>button.addEventListener('click',()=>{
+    const index=Number(button.dataset.forestAnimal),animal=animals[index];
+    if(animal.forest){
+      state.foundForest.add(index);button.classList.add('correct');button.disabled=true;
+      progress(state.foundForest.size,total);react(true,animal.praise,[animal.name,animal.praise]);
+      if(state.foundForest.size===total)setNext(ui('finish'),finishLevel);
+    }else{
+      state.excludedForest.add(index);button.classList.add('excluded');button.disabled=true;
+      react(false,animal.why,[animal.name,animal.why]);
+    }
+  }));
+  if(state.foundForest.size===total)setNext(ui('finish'),finishLevel);
+  if(announce)sceneSpeech();
+}
+
+function renderRecycling(announce=true){
+  clearFeedback();state.selectedTrash=null;
+  const items=data().recyclingItems,bins=data().recyclingBins;
+  setHeading(ui('recyclingKicker'),data().levels[6].title,ui('recyclingInstruction'),'♻️');
+  progress(state.sortedTrash.size,items.length);
+  $('activityContent').innerHTML=`<div class="recycling-board"><div><span class="column-label">${ui('recyclingItemsLabel')}</span><div class="recycling-items">${items.map((item,index)=>`<button class="recycling-item ${state.sortedTrash.has(index)?'sorted':''}" type="button" data-trash="${index}" ${state.sortedTrash.has(index)?'disabled':''} aria-label="${item.name}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong></button>`).join('')}</div></div><div><span class="column-label">${ui('recyclingBinsLabel')}</span><div class="recycling-bins">${bins.map(bin=>`<button class="recycling-bin bin-${bin.color}" type="button" data-bin="${bin.id}" aria-label="${bin.name}"><span class="bin-icon" aria-hidden="true">${bin.icon}</span><strong>${bin.name}</strong><span class="bin-contents" aria-hidden="true">${items.filter((item,index)=>item.bin===bin.id&&state.sortedTrash.has(index)).map(item=>item.icon).join(' ')}</span></button>`).join('')}</div></div></div>`;
+  $('activityContent').querySelectorAll('[data-trash]').forEach(button=>button.addEventListener('click',()=>{
+    state.selectedTrash=Number(button.dataset.trash);
+    $('activityContent').querySelectorAll('[data-trash]').forEach(item=>item.classList.toggle('selected',item===button));
+    $('explanation').textContent='';$('explanation').className='explanation';
+    speak([items[state.selectedTrash].name,data().speech.chooseBin]);
+  }));
+  $('activityContent').querySelectorAll('[data-bin]').forEach(button=>button.addEventListener('click',()=>{
+    const bin=bins.find(entry=>entry.id===button.dataset.bin);
+    if(state.selectedTrash===null){react(false,data().speech.chooseItemFirst,[bin.name,data().speech.chooseItemFirst]);return;}
+    const index=state.selectedTrash,item=items[index];
+    if(item.bin===button.dataset.bin){
+      state.sortedTrash.add(index);state.selectedTrash=null;
+      const itemButton=$('activityContent').querySelector(`[data-trash="${index}"]`);
+      itemButton.classList.remove('selected');itemButton.classList.add('sorted');itemButton.disabled=true;
+      button.querySelector('.bin-contents').textContent=[...state.sortedTrash].filter(i=>items[i].bin===button.dataset.bin).map(i=>items[i].icon).join(' ');
+      progress(state.sortedTrash.size,items.length);react(true,item.praise,[bin.name,item.praise]);
+      if(state.sortedTrash.size===items.length)setNext(ui('finish'),finishLevel);
+    }else react(false,item.why,[bin.name,item.why]);
+  }));
+  if(state.sortedTrash.size===items.length)setNext(ui('finish'),finishLevel);
+  if(announce)sceneSpeech();
 }
 
 $('menuButton').addEventListener('click',showMenu);

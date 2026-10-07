@@ -48,6 +48,8 @@ vm.runInContext(source, context);
 
   const css = fs.readFileSync(path.join(root, 'dist/style.css'), 'utf8');
   assert.match(css, /prefers-reduced-motion:reduce\).*animation:none!important/);
+  assert.match(css, /prefers-reduced-motion:reduce\).*gentle-bob 8s/);
+  assert.match(css, /\.level-grid\{[^}]*margin:22px auto 0/);
   assert.doesNotMatch(css, /animation-duration:\.01ms/);
   console.log('Speech cancellation and reduced-motion checks passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
