@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from build_content import ROOT, load_content
+from build_public_site import ANIMALS, BINS, LITTER
 from generate_audio import collect_lines, filename, settings, valid_audio
 
 
@@ -13,9 +14,9 @@ def verify() -> None:
     content = load_content()
     ru, kk = content["ru"], content["kk"]
     assert set(ru) == set(kk), "Locale sections differ"
-    assert len(ru["levels"]) == len(kk["levels"]) == 7
-    assert [level["id"] for level in ru["levels"]] == list(range(1, 8))
-    assert [level["id"] for level in kk["levels"]] == list(range(1, 8))
+    assert len(ru["levels"]) == len(kk["levels"]) == 8
+    assert [level["id"] for level in ru["levels"]] == list(range(1, 9))
+    assert [level["id"] for level in kk["levels"]] == list(range(1, 9))
     assert len(ru["adventures"]) == len(kk["adventures"]) == 7
     for source, target in zip(ru["adventures"], kk["adventures"]):
         assert len(source["answers"]) == len(target["answers"]) == 3
@@ -26,6 +27,7 @@ def verify() -> None:
     for section in ("habitats", "growth", "counting", "memoryPairs"):
         assert len(ru[section]) == len(kk[section]), f"Different {section} length"
     assert len(ru["forestAnimals"]) == len(kk["forestAnimals"]) == 16
+    assert len(ANIMALS) == len(ru["forestAnimals"])
     assert [animal["forest"] for animal in ru["forestAnimals"]] == [animal["forest"] for animal in kk["forestAnimals"]]
     assert len(ru["forestStages"]) == len(kk["forestStages"]) == 3
     for source, target in zip(ru["forestStages"], kk["forestStages"]):
@@ -35,14 +37,19 @@ def verify() -> None:
         assert all(0 <= item < len(ru["forestAnimals"]) for item in source["animalIds"])
         assert sum(ru["forestAnimals"][item]["forest"] for item in source["animalIds"]) == 5
     assert len(ru["recyclingItems"]) == len(kk["recyclingItems"]) == 12
+    assert len(LITTER) == len(ru["recyclingItems"])
     assert [bin_item["id"] for bin_item in ru["recyclingBins"]] == [bin_item["id"] for bin_item in kk["recyclingBins"]] == ["paper", "plastic", "organic", "metal"]
     assert [item["bin"] for item in ru["recyclingItems"]] == [item["bin"] for item in kk["recyclingItems"]]
     assert all(item["bin"] in {"paper", "plastic", "organic", "metal", "nature"} for item in ru["recyclingItems"])
+    for source, target in zip(ru["recyclingItems"], kk["recyclingItems"]):
+        if source["bin"] != "nature":
+            assert source.get("sortPraise") and target.get("sortPraise")
     assert len(ru["recyclingStages"]) == len(kk["recyclingStages"]) == 3
     assert [stage["background"] for stage in ru["recyclingStages"]] == ["forest.png", "riverbank.png", "shallows.png"]
     for source, target in zip(ru["recyclingStages"], kk["recyclingStages"]):
         assert source["itemIds"] == target["itemIds"]
         assert source["binIds"] == target["binIds"]
+        assert source["manualIntro"] and target["manualIntro"]
         assert len(source["itemIds"]) == 6
         assert all(0 <= item < len(ru["recyclingItems"]) for item in source["itemIds"])
         assert all(ru["recyclingItems"][item]["bin"] in source["binIds"] + ["nature"] for item in source["itemIds"])
@@ -77,10 +84,14 @@ def verify() -> None:
     assert not any(path.name.startswith(".env") for path in public.rglob("*"))
     for name in ("index.html", "style.css", "game.js", "content.js", "voice-map.js"):
         assert (ROOT / "dist" / name).read_bytes() == (public / name).read_bytes(), f"Public {name} is stale"
-    for name in ("forest.png", "riverbank.png", "shallows.png", "twilight-forest.png", "katya-stage.png", "vitya-stage.png", "watermelon-rind.svg", "melon-rind.svg"):
+    for name in ("forest.png", "riverbank.png", "shallows.png", "twilight-forest.png", "katya-stage.png", "vitya-stage.png"):
         assert (ROOT / "dist" / "assets" / name).read_bytes() == (public / "assets" / name).read_bytes(), f"Public asset {name} is stale"
+    for folder, names in (("animals", ANIMALS), ("bins", BINS), ("litter", LITTER)):
+        for name in names:
+            asset = Path("assets") / folder / f"{name}.png"
+            assert (ROOT / "dist" / asset).read_bytes() == (public / asset).read_bytes(), f"Public asset {asset} is stale"
     assert not (public / "assets" / "heroes-stage.png").exists(), "Obsolete shared character sprite remains public"
-    print(f"Verified 7 levels, 2 locales, {count} voice clips and public docs/ without .env.")
+    print(f"Verified 8 levels, 2 locales, 32 visual sprites, {count} voice clips and public docs/ without .env.")
 
 
 if __name__ == "__main__":

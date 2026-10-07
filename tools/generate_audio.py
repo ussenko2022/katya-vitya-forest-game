@@ -95,7 +95,10 @@ def collect_lines(content: dict) -> dict[str, list[str]]:
         lines.update(bin_item["name"] for bin_item in body["recyclingBins"])
         for item in body["recyclingItems"]:
             lines.update((item["name"], item["praise"], item["why"]))
-        lines.update(stage["intro"] for stage in body["recyclingStages"])
+            if item.get("sortPraise"):
+                lines.add(item["sortPraise"])
+        for stage in body["recyclingStages"]:
+            lines.update((stage["intro"], stage["manualIntro"]))
         result[locale] = sorted(line for line in lines if line.strip())
     return result
 

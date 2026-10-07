@@ -12,7 +12,10 @@ from generate_audio import read_env
 SOURCE = ROOT / "dist"
 TARGET = ROOT / "docs"
 STATIC_FILES = ("index.html", "style.css", "game.js", "content.js", "voice-map.js")
-IMAGES = ("forest.png", "katya-vitya.png", "katya-stage.png", "vitya-stage.png", "riverbank.png", "shallows.png", "twilight-forest.png", "watermelon-rind.svg", "melon-rind.svg")
+IMAGES = ("forest.png", "katya-vitya.png", "katya-stage.png", "vitya-stage.png", "riverbank.png", "shallows.png", "twilight-forest.png")
+ANIMALS = ("bear", "cow", "fox", "giraffe", "squirrel", "dolphin", "hedgehog", "penguin", "rabbit", "deer", "frog", "duck", "camel", "owl", "bat", "rooster")
+BINS = ("paper", "plastic", "organic", "metal")
+LITTER = ("newspaper", "bottle", "box", "cup", "paper", "bag", "watermelon-rind", "melon-rind", "can", "shell-a", "shell-b", "banana-peel")
 
 
 def build() -> tuple[int, int]:
@@ -29,6 +32,9 @@ def build() -> tuple[int, int]:
 
     allowed = set(STATIC_FILES)
     allowed.update(f"assets/{name}" for name in IMAGES)
+    allowed.update(f"assets/animals/{name}.png" for name in ANIMALS)
+    allowed.update(f"assets/bins/{name}.png" for name in BINS)
+    allowed.update(f"assets/litter/{name}.png" for name in LITTER)
     allowed.update(references)
     allowed.add(".nojekyll")
     TARGET.mkdir(exist_ok=True)

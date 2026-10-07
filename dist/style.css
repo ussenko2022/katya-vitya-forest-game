@@ -202,3 +202,33 @@ button:disabled{cursor:default}
 @media(max-width:760px){.stage-world{height:auto;min-height:720px;max-height:none}.stage-hud{top:10px;left:10px;right:10px;gap:8px}.stage-heading{max-width:66%}.stage-heading h2{font-size:26px}.stage-heading p{font-size:14px}.stage-kicker{font-size:10px}.stage-controls{min-width:95px;gap:5px}.stage-counter{font-size:11px;padding:4px 7px}.stage-progress{padding:5px}.stage-progress .progress-star{font-size:16px}.stage-listen{min-height:40px;padding:4px 9px;font-size:14px}.stage-listen span{display:none}.stage-character{width:29%;bottom:8%}.animal-field{left:17%;right:17%;top:28%;bottom:10%;gap:3px}.world-icon{font-size:clamp(39px,7vw,61px)}.world-label{font-size:12px;padding:3px 7px}.world-bins{left:17%;right:17%;top:30%;height:30%;gap:10px}.world-bin{min-height:155px;width:min(43%,205px);padding:8px 4px;border-width:4px;font-size:14px}.world-bin-icon{font-size:53px}.litter-field{left:14%;right:14%;bottom:11%;height:27%;gap:2px}.world-litter .world-icon{font-size:42px}.stage-feedback{top:20%;max-width:70%;font-size:15px}.stage-bubble{left:2%;bottom:3%;max-width:25%;padding:8px;font-size:12px}.stage-next{bottom:10px;min-height:45px;font-size:17px;padding:5px 18px}}
 @media(max-width:470px){.stage-world{min-height:680px}.stage-character{width:32%;bottom:12%}.animal-field{left:10%;right:10%;top:31%;bottom:17%}.world-icon{font-size:39px}.world-label{font-size:11px;padding:3px 5px}.world-animal.found:after,.world-animal.ruled-out:after,.world-litter.protected:after{width:25px;height:25px;font-size:18px;right:0}.world-bins{left:10%;right:10%;top:31%;height:27%}.world-bin{width:45%;min-height:145px}.litter-field{left:7%;right:7%;bottom:15%;height:27%}.world-litter .world-icon{font-size:38px}.world-litter .world-icon img{width:58px;height:45px}.stage-bubble{bottom:3%;max-width:29%;font-size:11px}.stage-feedback{top:22%;max-width:84%;font-size:14px}.stage-heading p{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.stage-character{animation:gentle-bob 8s ease-in-out infinite!important}.stage-character.happy{animation:gentle-cheer 2.4s ease-in-out 1!important}}
+
+/* Standalone transparent sprites sit in the landscape without visible cards or labels. */
+.animal-field,.litter-field{display:block}
+.world-animal,.world-litter{position:absolute;left:var(--x);top:var(--y);width:clamp(82px,10vw,160px);height:clamp(80px,10vw,160px);min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:translate(-50%,-50%) rotate(var(--rotation));transition:transform .2s,opacity .25s,filter .2s;touch-action:none}
+.world-animal img,.world-litter img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 5px #173e3288);pointer-events:none}
+.world-animal:hover:not(:disabled),.world-litter:hover:not(:disabled){transform:translate(-50%,-50%) rotate(var(--rotation)) scale(1.09)}
+.world-animal:active:not(:disabled),.world-litter:active:not(:disabled){transform:translate(-50%,-50%) rotate(var(--rotation)) scale(.96)}
+.world-animal.found img,.world-litter.protected img{filter:drop-shadow(0 0 13px #8fff66) drop-shadow(0 8px 5px #173e3288)}
+.world-animal.ruled-out{opacity:.44}
+.world-animal.found:after,.world-animal.ruled-out:after,.world-litter.protected:after{top:4%;right:0}
+.world-bins{gap:clamp(12px,3vw,42px)}
+.world-bin,.world-bin.bin-paper,.world-bin.bin-plastic,.world-bin.bin-organic,.world-bin.bin-metal{position:relative;display:block;width:min(38%,245px);height:100%;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;color:inherit;text-shadow:none}
+.world-bin img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 10px 6px #183e3588)}
+.world-bin:hover:not(:disabled){transform:translateY(-5px);filter:brightness(1.08)}
+.world-bin:disabled{cursor:default}
+.world-bin .bin-contents{position:absolute;bottom:8%;right:4%;margin:0;min-height:0;padding:2px 5px;background:#fffdf2dd;border-radius:16px;color:#e5a922;font-size:clamp(14px,1.6vw,22px);line-height:1;white-space:nowrap;text-shadow:none}
+.world-bin .bin-contents:empty{display:none}
+.litter-field{left:20%;right:20%;bottom:3%;height:30%}
+.world-litter{width:clamp(80px,9vw,140px);height:clamp(72px,8vw,125px)}
+.world-litter.selected img{filter:drop-shadow(0 0 14px #ffe66d) drop-shadow(0 6px 4px #173e3288)}
+.world-litter.dragging{z-index:12;transition:none;cursor:grabbing}
+.world-litter.dragging img{filter:drop-shadow(0 12px 9px #123c33a8)}
+.world-litter.sorted{opacity:0!important;transform:translate(-50%,-50%) rotate(var(--rotation));pointer-events:none}
+.nature-zone{position:absolute;z-index:5;left:50%;top:64%;transform:translateX(-50%);display:grid;place-items:center;width:clamp(84px,10vw,140px);height:clamp(54px,7vw,92px);border:4px solid #e9ffe6;border-radius:45%;background:#4a996fc9;box-shadow:0 8px 20px #1743348c;color:#fff;font-size:clamp(30px,3.5vw,47px);text-shadow:0 2px 4px #164b37}
+.nature-zone:hover{background:#62b881;transform:translateX(-50%) scale(1.06)}
+.stage-playfield.has-nature .litter-field{height:23%;bottom:2%}
+.flying-litter{position:fixed;z-index:30;object-fit:contain;pointer-events:none;filter:drop-shadow(0 10px 8px #153a3188)}
+@media(max-width:760px){.world-animal{width:clamp(70px,14vw,112px);height:clamp(70px,14vw,112px)}.world-litter{width:clamp(67px,13vw,105px);height:clamp(65px,12vw,100px)}.world-bin,.world-bin.bin-paper,.world-bin.bin-plastic,.world-bin.bin-organic,.world-bin.bin-metal{width:min(46%,195px)}.nature-zone{top:61%;width:84px;height:56px;font-size:28px}.stage-playfield.has-nature .litter-field{height:22%;bottom:2%}}
+@media(max-width:470px){.animal-field{left:8%;right:8%;top:31%;bottom:18%}.world-animal{width:78px;height:78px}.litter-field{left:8%;right:8%;bottom:14%;height:25%}.world-litter{width:71px;height:68px}.world-bins{top:30%;height:29%}.world-bin,.world-bin.bin-paper,.world-bin.bin-plastic,.world-bin.bin-organic,.world-bin.bin-metal{width:46%}.nature-zone{top:59%;width:74px;height:52px;font-size:25px}.stage-playfield.has-nature .litter-field{height:22%;bottom:4%}}
+@media(max-width:470px){.animal-field{left:18%;right:18%}}

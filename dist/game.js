@@ -6,7 +6,11 @@ let soundOn = true;
 let audioContext, currentAudio, speechTimer, reactionTimer, reactionSpeechTimer, flipTimer;
 let speechGeneration = 0, feedbackGeneration = 0;
 const synthesis = window.speechSynthesis;
-const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,stageIndex:0,stageOrder:[],foundForest:new Set(),excludedForest:new Set(),sortedTrash:new Set(),selectedTrash:null,session:0};
+const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,stageIndex:0,stageOrder:[],foundForest:new Set(),excludedForest:new Set(),sortedTrash:new Set(),selectedTrash:null,sortingBusy:false,session:0};
+const ANIMAL_IMAGES=['bear','cow','fox','giraffe','squirrel','dolphin','hedgehog','penguin','rabbit','deer','frog','duck','camel','owl','bat','rooster'];
+const LITTER_IMAGES=['newspaper','bottle','box','cup','paper','bag','watermelon-rind','melon-rind','can','shell-a','shell-b','banana-peel'];
+const ANIMAL_SPOTS=[[12,17,-6],[48,12,4],[83,19,-3],[19,45,5],[51,43,-4],[79,46,6],[12,77,-4],[49,75,3],[84,76,-5]];
+const LITTER_SPOTS=[[8,22,-13],[42,11,8],[78,24,-8],[19,73,7],[52,63,-12],[88,75,10]];
 const completed = loadCompleted();
 
 const data = () => GAME[locale];
@@ -152,8 +156,8 @@ function applyLocale(){
     if(state.level===4)renderCounting(false);
     if(state.level===5)renderMemory(false);
     if(state.level===6)renderForestAnimals(false);
-    if(state.level===7)renderRecycling(false);
-    if([2,3,5,6,7].includes(state.level))sceneSpeech();
+    if(state.level===7||state.level===8)renderRecycling(false);
+    if([2,3,5,6,7,8].includes(state.level))sceneSpeech();
   }
   if(!$('ending').hidden){
     $('endingTitle').textContent=format(ui('finished'),{n:state.level});
@@ -175,7 +179,7 @@ function showMenu(){
 function startLevel(level){
   state.session++;state.level=level;state.step=0;state.solved=false;state.selectedAnimal=null;
   state.matched=new Set();state.growthIndex=0;state.flipped=[];state.memoryLocked=false;state.memoryCards=[];
-  state.stageIndex=0;state.stageOrder=[];state.foundForest=new Set();state.excludedForest=new Set();state.sortedTrash=new Set();state.selectedTrash=null;
+  state.stageIndex=0;state.stageOrder=[];state.foundForest=new Set();state.excludedForest=new Set();state.sortedTrash=new Set();state.selectedTrash=null;state.sortingBusy=false;
   $('menuScreen').hidden=true;$('ending').hidden=true;$('levelScreen').hidden=false;$('menuButton').hidden=false;
   const immersive=level>=6;
   $('levelScreen').classList.toggle('immersive-mode',immersive);
@@ -189,7 +193,7 @@ function startLevel(level){
   if(level===4)renderCounting();
   if(level===5)renderMemory();
   if(level===6)renderForestAnimals();
-  if(level===7)renderRecycling();
+  if(level===7||level===8)renderRecycling();
 }
 
 function finishLevel(){
@@ -210,7 +214,7 @@ function sceneSpeech(){
   if(state.level===4)speak(data().counting[state.step].prompt);
   if(state.level===5)speak(data().speech.memoryIntro);
   if(state.level===6)speak(data().forestStages[state.stageIndex].intro);
-  if(state.level===7)speak(data().recyclingStages[state.stageIndex].intro);
+  if(state.level===7||state.level===8)speak(data().recyclingStages[state.stageIndex][state.level===8?'manualIntro':'intro']);
 }
 
 function renderSafety(reset=true){
@@ -351,7 +355,7 @@ function prepareStage(stage, kicker, done, total){
   $('stageWorld').style.backgroundImage=`url('assets/${stage.background}')`;
   $('stageKicker').textContent=kicker;
   $('stageTitle').textContent=stage.title;
-  $('stagePrompt').textContent=stage.intro;
+  $('stagePrompt').textContent=state.level===8?stage.manualIntro:stage.intro;
   $('stageCounter').textContent=format(ui('stageOf'),{n:state.stageIndex+1,total:3});
   progress(done,total);
 }
@@ -365,7 +369,7 @@ function advanceStage(){
   state.stageIndex++;
   state.stageOrder=[];
   state.foundForest=new Set();state.excludedForest=new Set();
-  state.sortedTrash=new Set();state.selectedTrash=null;
+  state.sortedTrash=new Set();state.selectedTrash=null;state.sortingBusy=false;
   if(state.level===6)renderForestAnimals();else renderRecycling();
 }
 
@@ -375,9 +379,11 @@ function renderForestAnimals(announce=true){
   if(state.stageOrder.length!==stage.animalIds.length)state.stageOrder=shuffle(stage.animalIds);
   const total=stage.animalIds.filter(id=>catalog[id].forest).length;
   prepareStage(stage,ui('forestKicker'),state.foundForest.size,total);
-  $('stagePlayfield').innerHTML=`<div class="animal-field">${state.stageOrder.map(id=>{
+  $('stagePlayfield').classList.remove('has-nature');
+  $('stagePlayfield').innerHTML=`<div class="animal-field">${state.stageOrder.map((id,index)=>{
     const animal=catalog[id],found=state.foundForest.has(id),excluded=state.excludedForest.has(id);
-    return `<button class="world-animal ${found?'found':''} ${excluded?'ruled-out':''}" type="button" data-forest-animal="${id}" ${found||excluded?'disabled':''} aria-label="${animal.name}"><span class="world-icon" aria-hidden="true">${animal.icon}</span><span class="world-label">${animal.name}</span></button>`;
+    const [x,y,rotation]=ANIMAL_SPOTS[index];
+    return `<button class="world-animal ${found?'found':''} ${excluded?'ruled-out':''}" type="button" data-forest-animal="${id}" style="--x:${x}%;--y:${y}%;--rotation:${rotation}deg" ${found||excluded?'disabled':''} aria-label="${animal.name}"><img src="assets/animals/${ANIMAL_IMAGES[id]}.png" alt="" draggable="false"></button>`;
   }).join('')}</div>`;
   $('stagePlayfield').querySelectorAll('[data-forest-animal]').forEach(button=>button.addEventListener('click',()=>{
     const id=Number(button.dataset.forestAnimal),animal=catalog[id];
@@ -394,45 +400,115 @@ function renderForestAnimals(announce=true){
   if(announce)sceneSpeech();
 }
 
+function acceptRecycling(id,targetId,stage,catalog){
+  const item=catalog[id];
+  if(item.bin!==targetId){react(false,item.why,[item.why]);return false;}
+  state.sortedTrash.add(id);state.selectedTrash=null;
+  const itemButton=$('stagePlayfield').querySelector(`[data-trash="${id}"]`);
+  itemButton.classList.remove('selected');itemButton.classList.add(targetId==='nature'?'protected':'sorted');itemButton.disabled=true;
+  if(targetId!=='nature'){
+    const bin=$('stagePlayfield').querySelector(`[data-bin="${targetId}"]`);
+    const count=stage.itemIds.filter(i=>catalog[i].bin===targetId&&state.sortedTrash.has(i)).length;
+    bin.querySelector('.bin-contents').textContent='⭐'.repeat(count);
+  }
+  progress(state.sortedTrash.size,stage.itemIds.length);
+  const praise=targetId==='nature'?item.praise:item.sortPraise;
+  react(true,praise,[praise]);
+  completeStage(state.sortedTrash.size,stage.itemIds.length);
+  return true;
+}
+
+function flyToTarget(button,target,done){
+  const image=button.querySelector('img');
+  const from=image.getBoundingClientRect(),to=target.getBoundingClientRect();
+  if(!image.animate||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)){done();return;}
+  const copy=image.cloneNode();copy.className='flying-litter';
+  Object.assign(copy.style,{left:`${from.left}px`,top:`${from.top}px`,width:`${from.width}px`,height:`${from.height}px`});
+  document.body.appendChild(copy);
+  const dx=to.left+to.width/2-from.left-from.width/2;
+  const dy=to.top+to.height*.34-from.top-from.height/2;
+  const flight=copy.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.25)`,opacity:.15}],{duration:850,easing:'cubic-bezier(.21,.72,.35,1)',fill:'forwards'});
+  let finished=false;
+  const finish=()=>{if(finished)return;finished=true;copy.remove();done();};
+  const fallback=setTimeout(finish,1200);
+  flight.onfinish=()=>{clearTimeout(fallback);finish();};
+  flight.oncancel=()=>{clearTimeout(fallback);finish();};
+}
+
+function attachTrashDrag(button,stage,catalog){
+  let pointer=null;
+  button.addEventListener('pointerdown',event=>{
+    if(button.disabled)return;
+    pointer={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+    button.setPointerCapture?.(event.pointerId);
+  });
+  button.addEventListener('pointermove',event=>{
+    if(!pointer||pointer.id!==event.pointerId)return;
+    const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;
+    if(!pointer.moved&&Math.hypot(dx,dy)>10){
+      pointer.moved=true;button.classList.add('dragging');
+      const item=catalog[Number(button.dataset.trash)];
+      state.selectedTrash=Number(button.dataset.trash);
+      $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.toggle('selected',other===button));
+      speak([item.name,item.bin==='nature'?data().speech.chooseNature:data().speech.chooseBin]);
+    }
+    if(pointer.moved){event.preventDefault();button.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(var(--rotation))`;}
+  });
+  const release=event=>{
+    if(!pointer||pointer.id!==event.pointerId)return;
+    const moved=pointer.moved;pointer=null;
+    button.classList.remove('dragging');button.style.transform='';
+    if(!moved)return;
+    button.dataset.ignoreClick='1';setTimeout(()=>delete button.dataset.ignoreClick,450);
+    button.style.pointerEvents='none';
+    const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-bin],[data-nature]');
+    button.style.pointerEvents='';
+    if(target)acceptRecycling(Number(button.dataset.trash),target.dataset.bin||'nature',stage,catalog);
+    else react(false,data().speech.dropOnBin,[data().speech.dropOnBin]);
+  };
+  button.addEventListener('pointerup',release);
+  button.addEventListener('pointercancel',event=>{if(pointer?.id===event.pointerId){pointer=null;button.classList.remove('dragging');button.style.transform='';}});
+}
+
 function renderRecycling(announce=true){
-  clearFeedback();state.selectedTrash=null;
-  const stage=data().recyclingStages[state.stageIndex],catalog=data().recyclingItems;
+  clearFeedback();state.selectedTrash=null;state.sortingBusy=false;
+  const stage=data().recyclingStages[state.stageIndex],catalog=data().recyclingItems,manual=state.level===8;
   const bins=stage.binIds.map(id=>data().recyclingBins.find(bin=>bin.id===id));
   if(state.stageOrder.length!==stage.itemIds.length)state.stageOrder=shuffle(stage.itemIds);
-  prepareStage(stage,ui('recyclingKicker'),state.sortedTrash.size,stage.itemIds.length);
-  $('stagePlayfield').innerHTML=`<div class="world-bins">${bins.map(bin=>`<button class="world-bin bin-${bin.color}" type="button" data-bin="${bin.id}" aria-label="${bin.name}"><span class="world-bin-icon" aria-hidden="true">${bin.icon}</span><strong>${bin.name}</strong><span class="bin-contents" aria-hidden="true">${stage.itemIds.filter(id=>catalog[id].bin===bin.id&&state.sortedTrash.has(id)).map(id=>catalog[id].icon).join(' ')}</span></button>`).join('')}</div><div class="litter-field">${state.stageOrder.map(id=>{
-    const item=catalog[id],done=state.sortedTrash.has(id);
-    const icon=id===6?'<img src="assets/watermelon-rind.svg" alt="">':id===7?'<img src="assets/melon-rind.svg" alt="">':item.icon;
-    return `<button class="world-litter ${item.bin==='nature'?'nature-item':''} ${done?(item.bin==='nature'?'protected':'sorted'):''}" type="button" data-trash="${id}" ${done?'disabled':''} aria-label="${item.name}"><span class="world-icon" aria-hidden="true">${icon}</span><span class="world-label">${item.name}</span></button>`;
+  prepareStage(stage,manual?ui('dragKicker'):ui('recyclingKicker'),state.sortedTrash.size,stage.itemIds.length);
+  $('stagePlayfield').classList.toggle('has-nature',manual&&stage.itemIds.some(id=>catalog[id].bin==='nature'));
+  $('stagePlayfield').innerHTML=`<div class="world-bins">${bins.map(bin=>{
+    const count=stage.itemIds.filter(id=>catalog[id].bin===bin.id&&state.sortedTrash.has(id)).length;
+    return `<button class="world-bin bin-${bin.color}" type="button" data-bin="${bin.id}" ${manual?'':'disabled'} aria-label="${bin.name}"><img src="assets/bins/${bin.id}.png" alt="" draggable="false"><span class="bin-contents" aria-hidden="true">${'⭐'.repeat(count)}</span></button>`;
+  }).join('')}</div>${manual&&stage.itemIds.some(id=>catalog[id].bin==='nature')?`<button class="nature-zone" type="button" data-nature="nature" aria-label="${ui('natureZone')}"><span aria-hidden="true">🌿🐚</span></button>`:''}<div class="litter-field">${state.stageOrder.map((id,index)=>{
+    const item=catalog[id],done=state.sortedTrash.has(id),[x,y,rotation]=LITTER_SPOTS[index];
+    return `<button class="world-litter ${item.bin==='nature'?'nature-item':''} ${done?(item.bin==='nature'?'protected':'sorted'):''}" type="button" data-trash="${id}" style="--x:${x}%;--y:${y}%;--rotation:${rotation}deg" ${done?'disabled':''} aria-label="${item.name}"><img src="assets/litter/${LITTER_IMAGES[id]}.png" alt="" draggable="false"></button>`;
   }).join('')}</div>`;
-  $('stagePlayfield').querySelectorAll('[data-trash]').forEach(button=>button.addEventListener('click',()=>{
+  $('stagePlayfield').querySelectorAll('[data-trash]').forEach(button=>{
     const id=Number(button.dataset.trash),item=catalog[id];
-    if(item.bin==='nature'){
-      state.selectedTrash=null;
-      $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.remove('selected'));
-      state.sortedTrash.add(id);button.classList.add('protected');button.disabled=true;
-      progress(state.sortedTrash.size,stage.itemIds.length);react(true,item.praise,[item.name,item.praise]);
-      completeStage(state.sortedTrash.size,stage.itemIds.length);
-      return;
-    }
-    state.selectedTrash=id;
-    $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.toggle('selected',other===button));
-    $('stageFeedback').textContent='';$('stageFeedback').className='stage-feedback';
-    speak([item.name,data().speech.chooseBin]);
-  }));
-  $('stagePlayfield').querySelectorAll('[data-bin]').forEach(button=>button.addEventListener('click',()=>{
-    const bin=bins.find(entry=>entry.id===button.dataset.bin);
-    if(state.selectedTrash===null){react(false,data().speech.chooseItemFirst,[bin.name,data().speech.chooseItemFirst]);return;}
-    const id=state.selectedTrash,item=catalog[id];
-    if(item.bin===bin.id){
-      state.sortedTrash.add(id);state.selectedTrash=null;
-      const itemButton=$('stagePlayfield').querySelector(`[data-trash="${id}"]`);
-      itemButton.classList.remove('selected');itemButton.classList.add('sorted');itemButton.disabled=true;
-      button.querySelector('.bin-contents').textContent=stage.itemIds.filter(i=>catalog[i].bin===bin.id&&state.sortedTrash.has(i)).map(i=>catalog[i].icon).join(' ');
-      progress(state.sortedTrash.size,stage.itemIds.length);react(true,item.praise,[bin.name,item.praise]);
-      completeStage(state.sortedTrash.size,stage.itemIds.length);
-    }else react(false,item.why,[bin.name,item.why]);
-  }));
+    button.addEventListener('click',()=>{
+      if(button.dataset.ignoreClick||button.disabled||state.sortingBusy)return;
+      if(!manual){
+        if(item.bin==='nature'){acceptRecycling(id,'nature',stage,catalog);return;}
+        const target=$('stagePlayfield').querySelector(`[data-bin="${item.bin}"]`);
+        state.sortingBusy=true;button.disabled=true;button.style.opacity='0';
+        const session=state.session;
+        flyToTarget(button,target,()=>{if(session!==state.session)return;state.sortingBusy=false;acceptRecycling(id,item.bin,stage,catalog);});
+        return;
+      }
+      state.selectedTrash=id;
+      $('stagePlayfield').querySelectorAll('[data-trash]').forEach(other=>other.classList.toggle('selected',other===button));
+      $('stageFeedback').textContent='';$('stageFeedback').className='stage-feedback';
+      speak([item.name,item.bin==='nature'?data().speech.chooseNature:data().speech.chooseBin]);
+    });
+    if(manual)attachTrashDrag(button,stage,catalog);
+  });
+  if(manual){
+    $('stagePlayfield').querySelectorAll('[data-bin],[data-nature]').forEach(target=>target.addEventListener('click',()=>{
+      if(state.selectedTrash===null){react(false,data().speech.chooseItemFirst,[data().speech.chooseItemFirst]);return;}
+      acceptRecycling(state.selectedTrash,target.dataset.bin||'nature',stage,catalog);
+    }));
+  }
   completeStage(state.sortedTrash.size,stage.itemIds.length);
   if(announce)sceneSpeech();
 }
