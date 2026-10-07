@@ -70,12 +70,16 @@ def verify() -> None:
 
     public = ROOT / "docs"
     assert (public / "index.html").is_file()
+    page = (ROOT / "dist" / "index.html").read_text(encoding="utf-8")
+    assert 'id="stageKatya" aria-hidden="true"><img src="assets/katya-stage.png"' in page
+    assert 'id="stageVitya" aria-hidden="true"><img src="assets/vitya-stage.png"' in page
     assert not (public / ".env").exists()
     assert not any(path.name.startswith(".env") for path in public.rglob("*"))
     for name in ("index.html", "style.css", "game.js", "content.js", "voice-map.js"):
         assert (ROOT / "dist" / name).read_bytes() == (public / name).read_bytes(), f"Public {name} is stale"
-    for name in ("forest.png", "riverbank.png", "shallows.png", "twilight-forest.png", "heroes-stage.png", "watermelon-rind.svg", "melon-rind.svg"):
+    for name in ("forest.png", "riverbank.png", "shallows.png", "twilight-forest.png", "katya-stage.png", "vitya-stage.png", "watermelon-rind.svg", "melon-rind.svg"):
         assert (ROOT / "dist" / "assets" / name).read_bytes() == (public / "assets" / name).read_bytes(), f"Public asset {name} is stale"
+    assert not (public / "assets" / "heroes-stage.png").exists(), "Obsolete shared character sprite remains public"
     print(f"Verified 7 levels, 2 locales, {count} voice clips and public docs/ without .env.")
 
 
