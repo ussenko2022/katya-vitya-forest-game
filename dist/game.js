@@ -4,6 +4,7 @@ let locale = 'ru';
 let voiceMode = 'female';
 let soundOn = true;
 let audioContext, currentAudio, speechTimer, reactionTimer, reactionSpeechTimer, flipTimer;
+let speechGeneration = 0, feedbackGeneration = 0;
 const synthesis = window.speechSynthesis;
 const state = {level:0,step:0,solved:false,selectedAnimal:null,matched:new Set(),growthIndex:0,memoryCards:[],flipped:[],memoryLocked:false,session:0};
 const completed = loadCompleted();
@@ -15,7 +16,15 @@ const format = (template, values) => template.replace(/\{(\w+)\}/g,(_,key)=>valu
 function loadCompleted(){try{return new Set(JSON.parse(localStorage.getItem('forest-levels')||'[]'));}catch{return new Set();}}
 function saveCompleted(){try{localStorage.setItem('forest-levels',JSON.stringify([...completed]));}catch{}}
 function browserVoice(){const prefix=locale==='kk'?'kk':'ru';return synthesis?.getVoices().find(v=>v.lang.toLowerCase().startsWith(prefix));}
-function stopVoice(){clearTimeout(speechTimer);synthesis?.cancel();if(currentAudio){currentAudio.pause();currentAudio=null;}}
+function stopVoice(){
+  speechGeneration++;
+  clearTimeout(speechTimer);
+  synthesis?.cancel();
+  if(currentAudio){
+    currentAudio.onended=null;currentAudio.onerror=null;
+    currentAudio.pause();currentAudio=null;
+  }
+}
 
 function updateVoiceWarning(){
   const warning=$('voiceWarning');let message='';
@@ -26,32 +35,34 @@ function updateVoiceWarning(){
 function showVoiceWarning(message){const warning=$('voiceWarning');warning.textContent=message;warning.hidden=false;}
 
 function speak(lines){
+  clearTimeout(reactionSpeechTimer);
   stopVoice();
   if(!soundOn)return;
   const queue=(Array.isArray(lines)?lines:[lines]).filter(Boolean);
-  const session=state.session;let index=0;
+  const session=state.session,generation=speechGeneration;let index=0;
   if(voiceMode!=='browser'){
     const assets=window.VOICE_ASSETS?.[locale]?.[voiceMode]||{};
     const nextAudio=()=>{
-      if(index>=queue.length||!soundOn||session!==state.session)return;
+      if(index>=queue.length||!soundOn||session!==state.session||generation!==speechGeneration)return;
       const file=assets[queue[index++]];
       if(!file){showVoiceWarning(ui('audioMissing'));nextAudio();return;}
       const audio=new Audio(file);currentAudio=audio;
-      audio.onended=nextAudio;audio.onerror=nextAudio;
-      audio.play().catch(()=>{currentAudio=null;showVoiceWarning(ui('audioMissing'));});
+      audio.onended=()=>{if(currentAudio===audio){currentAudio=null;nextAudio();}};
+      audio.onerror=()=>{if(currentAudio===audio){currentAudio=null;showVoiceWarning(ui('audioMissing'));nextAudio();}};
+      audio.play().catch(()=>{if(currentAudio===audio&&generation===speechGeneration){currentAudio=null;showVoiceWarning(ui('audioMissing'));}});
     };
     nextAudio();return;
   }
   const voice=browserVoice();
   if(!voice){updateVoiceWarning();return;}
   const next=()=>{
-    if(index>=queue.length||!soundOn||session!==state.session)return;
+    if(index>=queue.length||!soundOn||session!==state.session||generation!==speechGeneration)return;
     const utterance=new SpeechSynthesisUtterance(queue[index++]);
     utterance.lang=locale==='kk'?'kk-KZ':'ru-RU';utterance.voice=voice;
-    utterance.rate=.88;utterance.pitch=1.06;utterance.onend=next;
+    utterance.rate=.88;utterance.pitch=1.06;utterance.onend=next;utterance.onerror=next;
     synthesis.speak(utterance);
   };
-  speechTimer=setTimeout(next,60);
+  speechTimer=setTimeout(next,160);
 }
 
 function playNotes(success){
@@ -75,25 +86,24 @@ function playNotes(success){
 }
 
 function react(success,message,spoken=[message]){
-  const flash=$('colorFlash'),reaction=$('reaction');
+  const flash=$('colorFlash');
+  stopVoice();feedbackGeneration++;
   clearTimeout(reactionTimer);clearTimeout(reactionSpeechTimer);
   flash.className='color-flash';void flash.offsetWidth;
   flash.classList.add(success?'flash-success':'flash-error');
-  reaction.hidden=false;reaction.className=`reaction ${success?'good':'bad'}`;
-  reaction.textContent=`${success?'✓':'!'} ${message}`;
-  $('explanation').textContent=message;$('explanation').className=`explanation ${success?'good':'bad'}`;
+  $('explanation').textContent=`${success?'✓':'!'} ${message}`;$('explanation').className=`explanation ${success?'good':'bad'}`;
   $('speechBubble').textContent=success?ui('speechThanks'):ui('speechTry');
-  $('sceneHeroes').classList.remove('happy');
-  if(success){void $('sceneHeroes').offsetWidth;$('sceneHeroes').classList.add('happy');}
+  if(success&&!$('sceneHeroes').classList.contains('happy'))$('sceneHeroes').classList.add('happy');
   playNotes(success);
-  const session=state.session;
-  reactionSpeechTimer=setTimeout(()=>{if(session===state.session)speak(spoken);},success?260:330);
-  reactionTimer=setTimeout(()=>{reaction.hidden=true;flash.className='color-flash';},3100);
+  const session=state.session,generation=feedbackGeneration;
+  reactionSpeechTimer=setTimeout(()=>{if(session===state.session&&generation===feedbackGeneration)speak(spoken);},success?260:330);
+  reactionTimer=setTimeout(()=>{if(generation===feedbackGeneration)flash.className='color-flash';},1600);
 }
 
 function clearFeedback(){
+  feedbackGeneration++;stopVoice();
   clearTimeout(reactionTimer);clearTimeout(reactionSpeechTimer);clearTimeout(flipTimer);
-  $('reaction').hidden=true;$('colorFlash').className='color-flash';
+  $('colorFlash').className='color-flash';$('sceneHeroes').classList.remove('happy');
   $('explanation').textContent='';$('explanation').className='explanation';
   $('nextButton').hidden=true;$('speechBubble').textContent=ui('speechBubble');
 }
@@ -328,5 +338,6 @@ $('soundButton').addEventListener('click',()=>{
   $('soundButton').setAttribute('aria-label',soundOn?(locale==='ru'?'Выключить звук':'Дыбысты өшіру'):(locale==='ru'?'Включить звук':'Дыбысты қосу'));
   if(!soundOn)stopVoice();else if(state.level&&!$('levelScreen').hidden)sceneSpeech();
 });
+$('sceneHeroes').addEventListener('animationend',event=>{if(event.animationName==='cheer')event.currentTarget.classList.remove('happy');});
 if(synthesis)synthesis.onvoiceschanged=updateVoiceWarning;
 applyLocale();
